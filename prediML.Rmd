@@ -1,0 +1,82 @@
+##<span style="color:#2B3D85">Prediction Assignment Writeup: Personal activities prediction</span>
+####Author: Filippo Reviglio
+####Date: 16-Sept-2017
+
+
+##<span style="color:#B43E25">Synopsis</span>
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+##<span style="color:#B43E25">Data processing</span>
+
+In this section data is downloaded from the indicated URLS and processed. Some cleanup will be performed to remove empty rows and reduce the data to relevant variables.
+
+Training and testing data are available at these URL:
+```{r}
+trainingUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testingUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+```
+
+We download training and testing data to our disk and remove NAs:
+```{r,cache=TRUE}
+download.file(trainingUrl, 'training.csv')
+download.file(testingUrl, 'testing.csv')
+training   <-read.csv("training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing    <-read.csv("testing.csv", na.strings=c("NA", "#DIV/0!", ""))
+training   <-training[,colSums(is.na(training)) == 0]
+testing    <-testing[,colSums(is.na(testing)) == 0]
+````
+
+We remove first 7 cols since they are not useful for our analysis:
+```{r}
+training   <- training[,-c(1:7)]
+testing    <- testing[,-c(1:7)]
+```
+
+We assign required libraries:
+```{r}
+library(caret)
+library(randomForest)
+library(rpart) 
+```
+
+##<span style="color:#B43E25">Cross Validation</span>
+We run cross-validation and split training data in a training chunk (75% of original data) and testing chunk (25%). These samples will be used for testing the accuracy of different models:
+```{r}
+subSet <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+smallTraining <- training[subSet, ] 
+smallTesting  <- training[-subSet, ]
+```
+
+##<span style="color:#B43E25">Choosing the best Predictive Modeling</span>
+We compare Decision Tree and Random Forest models:
+
+###1: Decision Tree
+```{r}
+set.seed(1235)
+modelFitDT <- rpart(classe ~ ., data=smallTraining, method="class")
+prediDT <- predict(modelFitDT, smallTesting, type = "class")
+confusionMatrix(prediDT, smallTesting$classe)
+```
+
+###2: Random Forest
+```{r}
+set.seed(1235)
+modelFitRF <- randomForest(classe ~. , data=smallTraining, method="class")
+prediRF <- predict(modelFitRF, smallTesting, type = "class")
+confusionMatrix(prediRF, smallTesting$classe)
+```
+
+##<span style="color:#B43E25">Conclusions</span>
+The random Forest model is choosen as the most appropriate. The <b>accuracy</b> of the model is 0.995. The <b>expected out-of-sample error</b> is around 0.5%. Expected out-of-sample error is calculated as (1 - accuracy).
+
+We can now run the choosen model against the original Testing data:
+```{r}
+predictFinal <- predict(modelFitRF, testing, type="class")
+predictFinal
+```
+
+
+
